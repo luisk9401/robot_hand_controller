@@ -1,5 +1,7 @@
 //-----------------------------------------------------
 #include "systemc.h"
+#include <iostream>
+#include <stdio.h>
 
 typedef enum COMMAND { 
     ACT,PRE,PREA,
@@ -17,8 +19,6 @@ typedef enum DDR3_STATES  {
 }ddr3_state_t;
 
 
-
-
 SC_MODULE (ram) {
  
   //-----------Inputs/Outputs-------------------
@@ -31,7 +31,13 @@ SC_MODULE (ram) {
   ddr3_state_t NextState;
   command_t command;
   sc_event update_t,wr_t,rd_t;
-  
+  const char* state_name[int(PRECHARGE)+1] = {"POWERON", "RESET", "INIT",
+        "ZQCAL", "IDLE","SREFRESH",
+        "REFRESH","ACTIVE","PREPWRDOWN",
+        "BANKACTIVE","WRITE","READ",
+        "PRECHARGE"
+    };
+ 
   // Constructor for memory
   //SC_CTOR(ram) {
   SC_HAS_PROCESS(ram);
@@ -41,13 +47,12 @@ SC_MODULE (ram) {
     SC_THREAD(process_command);
     SC_THREAD(wr);
     SC_THREAD(rd);
-         
   } // End of Constructor
 
    //------------Code Starts Here-------------------------
   void update_command(command_t cmd) {
     command = cmd;
-    update_t.notify(15,SC_NS);
+    update_t.notify(2,SC_NS);
 
   }
   
@@ -58,111 +63,98 @@ SC_MODULE (ram) {
         switch(CurrentState) {
            case POWERON: 
                NextState = RESET;
-               printf("Transitioning to NextState: %d\n",NextState);
-               //sc_start(5,SC_NS);
+               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
            case RESET:
                NextState = INIT;
-               printf("Transitioning to NextState: %d\n",NextState);
-               //sc_start(10,SC_NS);
                break;
            case INIT:
                if (command == ZQCL) {
                    NextState = ZQCAL;
-                   printf("Transitioning to NextState: %d\n",NextState);
-                   //sc_start(3,SC_NS);
+                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
                break;
            case ZQCAL:
                NextState = IDLE;
-               printf("Transitioning to NextState: %d\n",NextState);
-               //sc_start(5,SC_NS);
+               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
            case IDLE:
                switch(command) {
                    case ACT:
                        NextState = ACTIVE;
-                       printf("Transitioning to NextState: %d\n",NextState);
+                       cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                        break;
                    case PDE:
                        NextState = PREPWRDOWN;
-                       printf("Transitioning to NextState: %d\n",NextState);
+                       cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                        break;
                    case SRE:
                        NextState = SREFRESH;
-                       printf("Transitioning to NextState: %d\n",NextState);
+                       cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                        break;
                    case REF:
                        NextState = REFRESH;
-                       printf("Transitioning to NextState: %d\n",NextState);
+                       cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                        break;
 
                }
                break;
            case ACTIVE: 
                NextState = BANKACTIVE;
-               printf("Transitioning to NextState: %d\n",NextState);
-               //sc_start(1,SC_NS);
+               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
            case PREPWRDOWN:
                if (command == PDX) {
                    NextState = IDLE;
-                   printf("Transitioning to NextState: %d\n",NextState);
-                   //sc_start(1,SC_NS);
-
+                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
                break; 
            case SREFRESH:
                if (command == SRX) {
                    NextState = IDLE;
-                   printf("Transitioning to NextState: %d\n",NextState);
-                   //sc_start(1,SC_NS);
+                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
                break;
            case REFRESH:
                NextState = IDLE;
-               printf("Transitioning to NextState: %d\n",NextState);
-               //sc_start(1,SC_NS);
+               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
            case BANKACTIVE:
                if (command == WR) {
                    NextState = WRITE;
-                   printf("Transitioning to NextState: %d\n",NextState);
-
+                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
                else if(command == RD) {
                    NextState = READ;
-                   printf("Transitioning to NextState: %d\n",NextState);
-                   //sc_start(1,SC_NS);
+                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
                break;
            case WRITE:
                 if (command == PRE || command == PREA ) {
                    NextState = PRECHARGE;
-                   printf("Transitioning to NextState: %d\n",NextState);
+                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                    wr_t.notify(2,SC_NS);
                 }
                 break;
            case READ:
                 if (command == PRE || command == PREA ) {
                    NextState = PRECHARGE;
-                   printf("Transitioning to NextState: %d\n",NextState);
+                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                    rd_t.notify(2,SC_NS);
                 }
                 break;
            case PRECHARGE:
                NextState = IDLE;
-               printf("Transitioning to NextState: %d\n",NextState);
-               //sc_start(2,SC_NS);
+               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
 
         }
-    }
-    if (command == RST) {
-        CurrentState = RESET;
-    }
-    else {
-        CurrentState = NextState;
+        if (command == RST) {
+            CurrentState = RESET;
+        }
+        else {
+            CurrentState = NextState;
+        }
     }
   }
  
@@ -171,7 +163,8 @@ SC_MODULE (ram) {
  void wr() {
     while(true) {
       wait(wr_t);
-      mem [address.read()] = data.read() && benable.read();
+      printf("Writing Data:%d to adress:%d\n",(int)data.read(),(int)address.read());
+      mem [address.read()] = data.read();
     }  
   }
 
@@ -179,6 +172,8 @@ SC_MODULE (ram) {
     while(true) {
       wait(rd_t);
       data = mem [address.read()] && benable.read();
+      printf("Reading Data:%d to adress:%d\n",(int)data.read(),(int)address.read());
+
     }  
   }
   

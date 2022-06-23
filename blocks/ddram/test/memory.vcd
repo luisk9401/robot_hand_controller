@@ -1,5 +1,5 @@
 $date
-     Jun 23, 2022       12:38:55
+     Jun 23, 2022       14:53:35
 $end
 
 $version
@@ -13,6 +13,8 @@ $end
 $scope module SystemC $end
 $var wire   32  aaaaa  data [31:0]  $end
 $var wire   32  aaaab  address [31:0]  $end
+$var wire   32  aaaac  data0 [31:0]  $end
+$var wire   32  aaaad  data1 [31:0]  $end
 $upscope $end
 $enddefinitions  $end
 
@@ -23,10 +25,20 @@ $end
 $dumpvars
 b0 aaaaa
 b0 aaaab
+b0 aaaac
+b0 aaaad
 $end
 
-#20
+#70
 b1010110011101101 aaaaa
-b10000 aaaab
 
-#40
+#134
+b1010110011101101 aaaac
+
+#170
+b1 aaaab
+
+#234
+b0 aaaaa
+
+#270
