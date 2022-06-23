@@ -1,0 +1,32 @@
+$date
+     Jun 23, 2022       12:38:55
+$end
+
+$version
+ SystemC 2.3.2-Accellera --- Jun  9 2022 15:59:50
+$end
+
+$timescale
+     1 ns
+$end
+
+$scope module SystemC $end
+$var wire   32  aaaaa  data [31:0]  $end
+$var wire   32  aaaab  address [31:0]  $end
+$upscope $end
+$enddefinitions  $end
+
+$comment
+All initial values are dumped below at time 0 sec = 0 timescale units.
+$end
+
+$dumpvars
+b0 aaaaa
+b0 aaaab
+$end
+
+#20
+b1010110011101101 aaaaa
+b10000 aaaab
+
+#40
