@@ -6,49 +6,58 @@ typedef enum FINGERS_N {
     RING,
     MIDDLE,
     INDEX,
-    Thumb
+    THUMB
 }finger_name_t;  
     
-
+typedef enum MOTORLOC 
+{
+    UP,
+    DOWN,
+    LEFT,
+} motorloc_t;
 typedef enum MOTOR_STATE {
   INIT,
   IDLE,
-  UPDATE_RC,
+  UPDATE_RQ,
   PWM_CFG,
   ACK,
+  RESET,
 } motor_state_t;
 
 typedef enum COMMAND { 
-   POWERON,
    UPD,
    NOP, 
+   RST,
 } command_t; 
 SC_MODULE (MotorController) {
  
   //-----------Inputs/Outputs-------------------
-  sc_inout<sc_uint<32> > data; 
-  sc_out<sc_uint<32> > address;
-  sc_out<sc_bit > ack;
-  sc_out<sc_bit > update;
+  uint32_t data; 
+  uint32_t address;
+  sc_bit ack;
+  sc_bit update;
   //-----------Internal variables-------------------
   motor_state_t CurrentState;
   motor_state_t NextState;
   command_t command;
-  sc_event update_t;
-  const char* state_name[int(PRECHARGE)+1] = {
+  sc_event update_t, update_pwm_t;
+  motorloc_t finger_status[5] = {UP,UP,UP,UP,UP};
+  const char* state_name[int(RESET)+1] = {
         "INIT",
         "IDLE",
         "UPDATE_RC",
         "PWM_CFG",
-        "ACK",  
+        "ACK", 
+        "RESET", 
   };
  
   // Constructor for memory
-  //SC_CTOR(ram) {
-  SC_HAS_PROCESS(MotorController) {
+  SC_CTOR(MotorController) {
     CurrentState = INIT;
     NextState = INIT;
     SC_THREAD(process_command);
+    SC_THREAD(update_pwm_val);
+
   } // End of Constructor
 
    //------------Code Starts Here-------------------------
@@ -57,99 +66,101 @@ SC_MODULE (MotorController) {
     update_t.notify(2,SC_NS);
 
   }
-  
+  void update_pwm_val() { 
+    while (true) {
+        wait(update_pwm_t);
+        switch((int)address) {
+            case LITTLE:
+                if (data == 0xFFFFFFFF) {
+                    finger_status[LITTLE]= DOWN;
+                }
+                else if (data == 0xDDDDDDDD){ 
+                    finger_status[LITTLE]= LEFT;
+                }
+                else {
+                    finger_status[LITTLE]= UP;
+                }
+                break;
+            case RING:
+                if (data == 0xFFFFFFFF) {
+                    finger_status[RING]= DOWN;
+                }
+                else if (data == 0xDDDDDDDD){ 
+                    finger_status[RING]= LEFT;
+                }
+                else {
+                    finger_status[RING]= UP;
+                }
+                break;
+            case MIDDLE:
+                if (data == 0xFFFFFFFF) {
+                    finger_status[MIDDLE]= DOWN;
+                }
+                else if (data == 0xDDDDDDDD){ 
+                    finger_status[MIDDLE]= LEFT;
+                }
+                else {
+                    finger_status[MIDDLE]= UP;
+                }
+                break;
+            case INDEX:
+                if (data == 0xFFFFFFFF) {
+                    finger_status[INDEX]= DOWN;
+                }
+                else if (data == 0xDDDDDDDD){ 
+                    finger_status[INDEX]= LEFT;
+                }
+                else {
+                    finger_status[INDEX]= UP;
+                }
+                break;
+            case THUMB:
+                if (data == 0xFFFFFFFF) {
+                    finger_status[THUMB]= DOWN;
+                }
+                else if (data == 0xDDDDDDDD){ 
+                    
+                    finger_status[THUMB]= LEFT;
+                    printf("Finger Status THUMB: %d\n",(int)finger_status[THUMB]);
+
+                }
+                else {
+                    finger_status[THUMB]= UP;
+                }
+                break;
+        }
+    }
+  }
+
   void process_command() {
     printf("CurrentState value is: %d\n",CurrentState);
     while (true) {
         wait(update_t);
         switch(CurrentState) {
-           case POWERON: 
+           case INIT: 
                NextState = RESET;
                cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
            case RESET:
-               NextState = INIT;
-               break;
-           case INIT:
-               if (command == ZQCL) {
-                   NextState = ZQCAL;
-                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-               }
-               break;
-           case ZQCAL:
                NextState = IDLE;
                cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
            case IDLE:
-               switch(command) {
-                   case ACT:
-                       NextState = ACTIVE;
-                       cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-                       break;
-                   case PDE:
-                       NextState = PREPWRDOWN;
-                       cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-                       break;
-                   case SRE:
-                       NextState = SREFRESH;
-                       cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-                       break;
-                   case REF:
-                       NextState = REFRESH;
-                       cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-                       break;
-
-               }
-               break;
-           case ACTIVE: 
-               NextState = BANKACTIVE;
-               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-               break;
-           case PREPWRDOWN:
-               if (command == PDX) {
-                   NextState = IDLE;
+               if (command == UPD) {
+                   NextState = PWM_CFG;
                    cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
+               break;
+           case PWM_CFG: 
+               NextState = ACK;
+               update_pwm_t.notify(2,SC_NS);
+               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
+               break;
+           case ACK:
+               NextState = IDLE;
+               ack = 0b1;
+               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break; 
-           case SREFRESH:
-               if (command == SRX) {
-                   NextState = IDLE;
-                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-               }
-               break;
-           case REFRESH:
-               NextState = IDLE;
-               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-               break;
-           case BANKACTIVE:
-               if (command == WR) {
-                   NextState = WRITE;
-                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-               }
-               else if(command == RD) {
-                   NextState = READ;
-                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-               }
-               break;
-           case WRITE:
-                if (command == PRE || command == PREA ) {
-                   NextState = PRECHARGE;
-                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-                   wr_t.notify(2,SC_NS);
-                }
-                break;
-           case READ:
-                if (command == PRE || command == PREA ) {
-                   NextState = PRECHARGE;
-                   cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-                   rd_t.notify(2,SC_NS);
-                }
-                break;
-           case PRECHARGE:
-               NextState = IDLE;
-               cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
-               break;
-
         }
         if (command == RST) {
             CurrentState = RESET;
