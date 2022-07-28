@@ -20,11 +20,11 @@ typedef enum MOTOR_STATE {
   IDLE,
   UPDATE_RQ,
   PWM_CFG,
-  ACK,
+  ACK_M,
   RESET,
 } motor_state_t;
 
-typedef enum COMMAND { 
+typedef enum COMMAND_M{ 
    UPD,
    NOP, 
    RST,
@@ -36,6 +36,9 @@ SC_MODULE (MotorController) {
   uint32_t address;
   sc_bit ack;
   sc_bit update;
+  sc_fifo_out<uint8_t> motor_out;
+  sc_fifo_in<uint8_t> motor_in;
+
   //-----------Internal variables-------------------
   motor_state_t CurrentState;
   motor_state_t NextState;
@@ -47,7 +50,7 @@ SC_MODULE (MotorController) {
         "IDLE",
         "UPDATE_RC",
         "PWM_CFG",
-        "ACK", 
+        "ACK_M", 
         "RESET", 
   };
  
@@ -152,11 +155,11 @@ SC_MODULE (MotorController) {
                }
                break;
            case PWM_CFG: 
-               NextState = ACK;
+               NextState = ACK_M;
                update_pwm_t.notify(2,SC_NS);
                cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
-           case ACK:
+           case ACK_M:
                NextState = IDLE;
                ack = 0b1;
                cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;

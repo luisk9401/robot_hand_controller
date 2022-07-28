@@ -4,15 +4,15 @@
 #include <stdio.h>
 
 typedef enum COMMAND { 
-    ACT,PRE,PREA,
-    RD,WR,REF,RST,
+    ACT,PRE_M,PREA,
+    RD,WR,REF,RST_M,
     PDE,PDX,ZQCL,
-    SRE,SRX,NOP
-}command_t;
+    SRE,SRX,NOP_M
+}command_m_t;
 
 typedef enum DDR3_STATES  { 
-    POWERON, RESET, INIT,
-    ZQCAL, IDLE,SREFRESH,
+    POWERON, RESET_M, INIT_M,
+    ZQCAL, IDLE_M,SREFRESH,
     REFRESH,ACTIVE,PREPWRDOWN,
     BANKACTIVE,WRITE,READ,
     PRECHARGE
@@ -22,17 +22,20 @@ typedef enum DDR3_STATES  {
 SC_MODULE (ram) {
  
   //-----------Inputs/Outputs-------------------
-  sc_inout<sc_uint<32> > data; 
-  sc_in<sc_uint<32> > address;
+  sc_inout<sc_uint<8> > data; 
+  sc_in<sc_uint<64> > address;
   sc_in<sc_uint<32> > benable; 
   //-----------Internal variables-------------------
   sc_uint <32> mem[1024];
   ddr3_state_t CurrentState;
   ddr3_state_t NextState;
-  command_t command;
+  command_m_t command;
   sc_event update_t,wr_t,rd_t;
-  const char* state_name[int(PRECHARGE)+1] = {"POWERON", "RESET", "INIT",
-        "ZQCAL", "IDLE","SREFRESH",
+
+  sc_fifo_out<uint8_t> dram_out;
+  sc_fifo_in<uint8_t>  dram_in;
+  const char* state_name[int(PRECHARGE)+1] = {"POWERON", "RESET_M", "INIT_M",
+        "ZQCAL", "IDLE_M","SREFRESH",
         "REFRESH","ACTIVE","PREPWRDOWN",
         "BANKACTIVE","WRITE","READ",
         "PRECHARGE"
@@ -50,7 +53,7 @@ SC_MODULE (ram) {
   } // End of Constructor
 
    //------------Code Starts Here-------------------------
-  void update_command(command_t cmd) {
+  void update_command(command_m_t cmd) {
     command = cmd;
     update_t.notify(2,SC_NS);
 
@@ -62,23 +65,23 @@ SC_MODULE (ram) {
         wait(update_t);
         switch(CurrentState) {
            case POWERON: 
-               NextState = RESET;
+               NextState = RESET_M;
                cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
-           case RESET:
-               NextState = INIT;
+           case RESET_M:
+               NextState = INIT_M;
                break;
-           case INIT:
+           case INIT_M:
                if (command == ZQCL) {
                    NextState = ZQCAL;
                    cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
                break;
            case ZQCAL:
-               NextState = IDLE;
+               NextState = IDLE_M;
                cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
-           case IDLE:
+           case IDLE_M:
                switch(command) {
                    case ACT:
                        NextState = ACTIVE;
@@ -105,18 +108,18 @@ SC_MODULE (ram) {
                break;
            case PREPWRDOWN:
                if (command == PDX) {
-                   NextState = IDLE;
+                   NextState = IDLE_M;
                    cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
                break; 
            case SREFRESH:
                if (command == SRX) {
-                   NextState = IDLE;
+                   NextState = IDLE_M;
                    cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                }
                break;
            case REFRESH:
-               NextState = IDLE;
+               NextState = IDLE_M;
                cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
            case BANKACTIVE:
@@ -130,27 +133,27 @@ SC_MODULE (ram) {
                }
                break;
            case WRITE:
-                if (command == PRE || command == PREA ) {
+                if (command == PRE_M || command == PREA ) {
                    NextState = PRECHARGE;
                    cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                    wr_t.notify(2,SC_NS);
                 }
                 break;
            case READ:
-                if (command == PRE || command == PREA ) {
+                if (command == PRE_M || command == PREA ) {
                    NextState = PRECHARGE;
                    cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                    rd_t.notify(2,SC_NS);
                 }
                 break;
            case PRECHARGE:
-               NextState = IDLE;
+               NextState = IDLE_M;
                cout <<"Transitioning to NextState:"<<state_name[(int)NextState]<<endl;
                break;
 
         }
-        if (command == RST) {
-            CurrentState = RESET;
+        if (command == RST_M) {
+            CurrentState = RESET_M;
         }
         else {
             CurrentState = NextState;

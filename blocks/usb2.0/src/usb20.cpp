@@ -48,49 +48,63 @@ SC_MODULE (usb20) {
   //-----------Internal variables-------------------
   usb_states_t CurrentSate;
   usb_states_t NextState;
-  uint8_t *data_ram_out;
+  sc_fifo_out<uint8_t> data_ram_out;
+  sc_fifo_in<uint8_t>  data_read_in;
+
+  uint8_t *data;
+  sc_event update_data_t;
   uint8_t *data_out;
   // Constructor  
   SC_CTOR(usb20) {
     //Data that will go to the ram tlm eventually on project 2 
-    data_ram_out = new uint8_t [FRAME_SIZE-1];
     data_out     = new uint8_t [BUFFER_SIZE-1];
     CurrentSate  = HC_HS_IDLE;
     NextState    = HC_HS_IDLE; 
-
+    SC_THREAD(read);
   } // End of Constructor
 
+  void update_data_s(uint8_t data_r[BUFFER_SIZE]) {
+    data = &data_r[0];
+    update_data_t.notify();
+
+  }
    //------------Code Starts Here-------------------------
-  void read(uint8_t data[BUFFER_SIZE]) {
-    printf("CurrentSate value is: %d\n",CurrentSate);
-    switch(CurrentSate) { 
-        case HC_HS_IDLE: 
-            if (data[0] == (uint8_t)Token) {
-                NextState = HC_HS_PACKET_START;
+  void read() {
+    while(true) {
+        printf("CurrentSate value is: %d\n",CurrentSate);
+        wait(update_data_t);
+        switch(CurrentSate) { 
+            case HC_HS_IDLE: 
+                if (*data == (uint8_t)Token) {
+                    NextState = HC_HS_PACKET_START;
+                    printf("Transitioning to NextState: %d\n",NextState);
+                }
+                break;
+            case HC_HS_PACKET_START:
+                if (*(data+1) == (uint8_t)SOF) {
+                    NextState = HC_HS_PACKET_COLLECT;
+                    printf("Transitioning to NextState: %d\n",NextState);
+                }
+                break;
+            case HC_HS_PACKET_COLLECT: 
+                if (*(data+1) == (uint8_t)EoF) {
+                    NextState = HC_HS_PACKET_END;
+                    printf("Transitioning to NextState: %d\n",NextState);
+                }
+                for (int i=2; i <= 1023; i++) {
+                    data_ram_out.write(*(data+i));
+                    wait(1, sc_core::SC_NS);  
+                }
+                break;
+            case  HC_HS_PACKET_END:
+                NextState = HC_HS_IDLE;
                 printf("Transitioning to NextState: %d\n",NextState);
-            }
-            break;
-        case HC_HS_PACKET_START:
-            if (data[1] == (uint8_t)SOF) {
-                NextState = HC_HS_PACKET_COLLECT;
-                printf("Transitioning to NextState: %d\n",NextState);
-            }
-            break;
-        case HC_HS_PACKET_COLLECT: 
-            if (data[1] == (uint8_t)EoF) {
-                NextState = HC_HS_PACKET_END;
-                printf("Transitioning to NextState: %d\n",NextState);
-            }
-            data_ram_out = &data[2];
-            break;
-        case  HC_HS_PACKET_END:
-            NextState = HC_HS_IDLE;
-            printf("Transitioning to NextState: %d\n",NextState);
-            data_out[0] = (uint8_t)Handshake;
-            data_out[1] = (uint8_t)ACK;
-            break;
+                data_out[0] = (uint8_t)Handshake;
+                data_out[1] = (uint8_t)ACK;
+                break;
+        }
+        CurrentSate = NextState;
     }
-    CurrentSate = NextState;
   }  
   
 

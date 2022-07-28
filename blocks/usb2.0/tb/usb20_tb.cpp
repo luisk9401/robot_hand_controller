@@ -28,12 +28,16 @@ void read_image(std::string path)
   int packet_count = 0;
   for (int x=0; x < m_width; x++) {
       for (int y=0; y < m_height; y++) {
-        if(packet_count < MAX_PACKET_COUNT_SUPPORT) {
+        if(packet_count = MAX_PACKET_COUNT_SUPPORT) {
+            packet_count = 0;
+        }
+        else {
             unsigned char color[3];
             f.read((char*)color,3);
             data[packet_count+2] = (uint8_t)color[0];
             data[packet_count+3] = (uint8_t)color[1];
             data[packet_count+4] = (uint8_t)color[2];
+            packet_count++;
         }
         usb.read(data);
       }
