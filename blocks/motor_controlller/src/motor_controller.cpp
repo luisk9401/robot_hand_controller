@@ -1,6 +1,6 @@
 //-----------------------------------------------------
 #include "systemc.h"
-
+#include "../../utils/Initiator.cpp"
 typedef enum FINGERS_N { 
     LITTLE,
     RING,
@@ -36,13 +36,12 @@ SC_MODULE (MotorController) {
   uint32_t address;
   sc_bit ack;
   sc_bit update;
-  sc_fifo_out<uint8_t> motor_out;
-  sc_fifo_in<uint8_t> motor_in;
 
   //-----------Internal variables-------------------
   motor_state_t CurrentState;
   motor_state_t NextState;
   command_t command;
+  Initiator *motor_initiator_socket;
   sc_event update_t, update_pwm_t;
   motorloc_t finger_status[5] = {UP,UP,UP,UP,UP};
   const char* state_name[int(RESET)+1] = {
@@ -58,6 +57,7 @@ SC_MODULE (MotorController) {
   SC_CTOR(MotorController) {
     CurrentState = INIT;
     NextState = INIT;
+    motor_initiator_socket = new Initiator("motor_initiator_socket");
     SC_THREAD(process_command);
     SC_THREAD(update_pwm_val);
 

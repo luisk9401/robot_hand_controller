@@ -1,8 +1,10 @@
 //-----------------------------------------------------
 #include "systemc.h"
+#include "../../utils/Initiator.cpp"
 //Constants 
 #define  BUFFER_SIZE    1026
 #define  FRAME_SIZE 1024
+
 //Enumtype
 typedef enum PID_TYPE {
     Token     = 0b0001,
@@ -48,16 +50,16 @@ SC_MODULE (usb20) {
   //-----------Internal variables-------------------
   usb_states_t CurrentSate;
   usb_states_t NextState;
-  sc_fifo_out<uint8_t> data_ram_out;
-  sc_fifo_in<uint8_t>  data_read_in;
 
   uint8_t *data;
   sc_event update_data_t;
+  Initiator *usb_initiator_socket;
   uint8_t *data_out;
   // Constructor  
   SC_CTOR(usb20) {
     //Data that will go to the ram tlm eventually on project 2 
     data_out     = new uint8_t [BUFFER_SIZE-1];
+    usb_initiator_socket = new Initiator("usb_initiator_socket");
     CurrentSate  = HC_HS_IDLE;
     NextState    = HC_HS_IDLE; 
     SC_THREAD(read);
@@ -92,7 +94,8 @@ SC_MODULE (usb20) {
                     printf("Transitioning to NextState: %d\n",NextState);
                 }
                 for (int i=2; i <= 1023; i++) {
-                    data_ram_out.write(*(data+i));
+                    //data_ram_out.write(*(data+i));
+                    usb_initiator_socket->write(*data,1);
                     wait(1, sc_core::SC_NS);  
                 }
                 break;
