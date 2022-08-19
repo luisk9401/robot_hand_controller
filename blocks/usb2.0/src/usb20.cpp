@@ -94,7 +94,6 @@ SC_MODULE (usb20) {
                     printf("Transitioning to NextState: %d\n",NextState);
                 }
                 for (int i=2; i <= 1023; i++) {
-                    //data_ram_out.write(*(data+i));
                     usb_initiator_socket->write(*data,1);
                     wait(1, sc_core::SC_NS);  
                 }

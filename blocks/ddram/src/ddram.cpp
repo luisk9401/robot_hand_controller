@@ -8,19 +8,19 @@ using namespace std;
 #include "tlm_utils/simple_target_socket.h"
 #include "tlm_utils/peq_with_cb_and_phase.h"
 #include "../../utils/Initiator.cpp"
-struct Memory: sc_module   
+struct MemoryDDR: sc_module   
 {   
   // TLM-2 socket, defaults to 32-bits wide, base protocol
-  tlm_utils::simple_target_socket<Memory> socket;
+  tlm_utils::simple_target_socket<MemoryDDR> socket;
   
   enum { SIZE = 1024 };   
   const sc_time LATENCY;   
    
-  SC_CTOR(Memory)   
+  SC_CTOR(MemoryDDR)   
   : socket("socket"), LATENCY(10, SC_NS)   
   {   
     // Register callbacks for incoming interface method calls
-    socket.register_nb_transport_fw(this, &Memory::nb_transport_fw);
+    socket.register_nb_transport_fw(this, &MemoryDDR::nb_transport_fw);
     //socket.register_nb_transport_bw(this, &Memory::nb_transport_bw);
    
     // Initialize memory with random data   

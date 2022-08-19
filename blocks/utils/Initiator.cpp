@@ -60,13 +60,13 @@ struct Initiator: sc_module
          trans.set_data_ptr(reinterpret_cast<unsigned char*>(&data));   
          trans.set_data_length(4);
          tlm::tlm_sync_enum status;  
-         cout << name() << " BEGIN_REQ SENT" << " TRANS ID " << id_extension->transaction_id << " at time " << sc_time_stamp() << endl;
+         //cout << name() << " BEGIN_REQ SENT" << " TRANS ID " << id_extension->transaction_id << " at time " << sc_time_stamp() << endl;
          status = socket->nb_transport_fw( trans, phase, delay );
          switch (status)   {
             case tlm::TLM_ACCEPTED:   
                 //Delay for END_REQ
                 wait( sc_time(10, SC_NS) );
-                cout << name() << " END_REQ SENT" << " TRANS ID " << id_extension->transaction_id << " at time " << sc_time_stamp() << endl;
+                //cout << name() << " END_REQ SENT" << " TRANS ID " << id_extension->transaction_id << " at time " << sc_time_stamp() << endl;
                 // Expect response on the backward path  
                 phase = tlm::END_REQ; 
                 status = socket->nb_transport_fw(trans, phase, delay);  // Non-blocking transport call
@@ -76,8 +76,8 @@ struct Initiator: sc_module
                 // Initiator obliged to check response status   
                 if (trans.is_response_error() )   
                     SC_REPORT_ERROR("TLM2", "Response error from nb_transport_fw");   
-                cout << "trans/fw = { " << (cmd ? 'W' : 'R') << ", " << hex << " } , data = "   
-                << hex << data << " at time " << sc_time_stamp() << ", delay = " << delay << endl;   
+                //cout << "trans/fw = { " << (cmd ? 'W' : 'R') << ", " << hex << " } , data = "   
+                //<< hex << data << " at time " << sc_time_stamp() << ", delay = " << delay << endl;   
                 break;   
          }
          id_extension->transaction_id++;
@@ -114,7 +114,7 @@ struct Initiator: sc_module
       if (trans.is_response_error() )   
         SC_REPORT_ERROR("TLM2", "Response error from nb_transport");   
             
-      cout << "trans/bw = { " << (cmd ? 'W' : 'R') << ", " << hex << adr   
+      cout <<name() << "trans/bw = { " << (cmd ? 'W' : 'R') << ", " << hex << adr   
            << " } , data = " << hex << data << " at time " << sc_time_stamp()   
            << ", delay = " << delay << endl;
       

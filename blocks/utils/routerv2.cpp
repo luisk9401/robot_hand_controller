@@ -57,7 +57,7 @@ struct Router: sc_module
       
       wait(delay);
       
-      cout << name() << " END_REQ RECEIVED" << " TRANS ID " << id_extension->transaction_id << " at time " << sc_time_stamp() << endl;
+      //cout << name() << " END_REQ RECEIVED" << " TRANS ID " << id_extension->transaction_id << " at time " << sc_time_stamp() << endl;
       
       return tlm::TLM_COMPLETED;
     }
@@ -83,7 +83,7 @@ struct Router: sc_module
       //Delay
       wait(delay);
       
-      cout << name() << " BEGIN_REQ RECEIVED" << " TRANS ID " << id_extension->transaction_id << " at time " << sc_time_stamp() << endl;      
+      //cout << name() << " BEGIN_REQ RECEIVED" << " TRANS ID " << id_extension->transaction_id << " at time " << sc_time_stamp() << endl;      
       
       return tlm::TLM_ACCEPTED;
     }  
@@ -107,7 +107,7 @@ struct Router: sc_module
       ID_extension* id_extension = new ID_extension;
       trans_pending->get_extension( id_extension ); 
       
-      sc_dt::uint64 adr = trans_pending->get_address() / 4;
+      sc_dt::uint64 adr = trans_pending->get_address();
       tlm::tlm_command cmd = trans_pending->get_command();   
       unsigned char*   ptr = trans_pending->get_data_ptr();   
       unsigned int     len = trans_pending->get_data_length();   
@@ -127,7 +127,7 @@ struct Router: sc_module
       wait( sc_time(20, SC_NS) );
       
       delay_pending= sc_time(10, SC_NS);
-      cout << name() << " BEGIN_RESP SENT" << " TRANS ID " << id_extension->transaction_id <<  " at time " << sc_time_stamp() << endl;
+      //cout << name() << " BEGIN_RESP SENT" << " TRANS ID " << id_extension->transaction_id <<  " at time " << sc_time_stamp() << endl;
       
       // Call on backward path to complete the transaction
       tlm::tlm_sync_enum status;
@@ -147,7 +147,7 @@ struct Router: sc_module
           
           wait( sc_time(10, SC_NS) );
           
-          cout << name() << " END_RESP SENT" << " TRANS ID " << id_extension->transaction_id <<  " at time " << sc_time_stamp() << endl;
+          //cout << name() << " END_RESP SENT" << " TRANS ID " << id_extension->transaction_id <<  " at time " << sc_time_stamp() << endl;
           // Expect response on the backward path  
           phase = tlm::END_RESP; 
           socket->nb_transport_bw( *trans_pending, phase, delay_pending );  // Non-blocking transport call
